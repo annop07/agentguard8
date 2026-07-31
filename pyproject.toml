@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentguard"
+version = "0.1.0.dev0"
+description = "Deterministic policy enforcement for AI agent tool calls."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+keywords = ["llm", "agent", "security", "prompt-injection", "tool-calling", "guardrails"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
+dependencies = ["pydantic>=2.0"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "hypothesis>=6.100",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentguard"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["agentguard"]
+branch = true
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# __all__ จัดกลุ่มตามหมวดพร้อมคอมเมนต์ อ่านง่ายกว่าเรียงตามตัวอักษรรวดเดียว
+"src/agentguard/__init__.py" = ["RUF022"]
+# ไฟล์นี้ทดสอบพฤติกรรมของ % และ .format() โดยตรง เปลี่ยนเป็น f-string คือลบเทสต์ทิ้ง
+"tests/test_tainted_str.py" = ["UP031", "UP032"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src/agentguard"]
