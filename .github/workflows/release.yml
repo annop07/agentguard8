@@ -9,6 +9,13 @@ on:
 permissions:
   contents: read
 
+# ชื่อ distribution บน TestPyPI เท่านั้น — "agentguard" ตัวจริงถูกคนอื่นจองไว้บน
+# TestPyPI ไปแล้ว (เช็คแล้วว่ายังว่างบน PyPI จริง) ชื่อ import ภายใน (`agentguard`)
+# ไม่เปลี่ยนตาม เพราะ distribution name กับ package name เป็นคนละอย่างกัน — wheel
+# ที่ได้ยังคง `src/agentguard` เหมือนเดิม แค่ metadata ชื่อโปรเจกต์ต่างออกไป
+env:
+  TESTPYPI_PROJECT: agentguard-annop07
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,6 +32,7 @@ jobs:
           echo "tag=$tag packaged=$packaged"
           test "$tag" = "$packaged"
 
+      # dist ตัวนี้คือของจริงที่ไปขึ้น PyPI — ชื่อ "agentguard" ไม่ถูกแตะเลย
       - run: uv build
       - uses: actions/upload-artifact@v4
         with:
@@ -38,10 +46,15 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      # build แยกต่างหากเฉพาะ job นี้ ด้วยชื่อ distribution ที่ไม่ชนกับใครบน TestPyPI —
+      # dist ของ job "build" (ชื่อ agentguard) ไม่ถูกใช้ตรงนี้เลย
+      - name: Build under the TestPyPI-only name
+        run: |
+          sed -i "s/^name = \"agentguard\"/name = \"${TESTPYPI_PROJECT}\"/" pyproject.toml
+          uv build
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
@@ -50,19 +63,20 @@ jobs:
     needs: testpypi
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       # ติดตั้งจาก TestPyPI จริงแล้วรันของจริง — `uv build` สำเร็จไม่ได้แปลว่า wheel
-      # ที่ได้ import ได้ dependency ครบ หรือ packages ถูกใส่มาจริง
+      # ที่ได้ import ได้ dependency ครบ หรือ packages ถูกใส่มาจริง ติดตั้งด้วยชื่อ
+      # distribution ของ TestPyPI แต่ import ด้วยชื่อ package จริง (`agentguard`)
+      # เพราะสองอย่างนี้ประกาศแยกกันใน pyproject.toml
       - name: Install from TestPyPI and use it
         run: |
           for _ in $(seq 1 10); do
             pip install --index-url https://test.pypi.org/simple/ \
               --extra-index-url https://pypi.org/simple \
-              "agentguard==${GITHUB_REF_NAME#v}" && break
+              "${TESTPYPI_PROJECT}==${GITHUB_REF_NAME#v}" && break
             echo "ยังไม่ขึ้น index รอ 15 วิ"; sleep 15
           done
           python -c "
@@ -82,6 +96,7 @@ jobs:
     permissions:
       id-token: write
     steps:
+      # dist ของ job "build" — ชื่อ "agentguard" ตัวจริง ไม่ใช่ตัวที่ถูก sed ใน testpypi
       - uses: actions/download-artifact@v4
         with:
           name: dist
