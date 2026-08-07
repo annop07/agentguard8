@@ -74,3 +74,30 @@ def test_main_runs(demo: ModuleType, capsys: pytest.CaptureFixture[str]) -> None
     out = capsys.readouterr().out
     assert "tainted_argument" in out
     assert "audit log" in out
+
+
+LOOP = Path(__file__).resolve().parents[1] / "examples" / "openai_loop.py"
+
+
+@pytest.fixture
+def loop_demo() -> ModuleType:
+    spec = importlib.util.spec_from_file_location("openai_loop", LOOP)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["openai_loop"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_openai_loop_demo_blocks_the_transfer_and_keeps_going(
+    loop_demo: ModuleType, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """เดโมนี้ขายเรื่อง "loop ไม่พัง" — ถ้ามัน raise ขึ้นมาก็เท่ากับขายผิด"""
+    loop_demo.LEDGER["111-1"] = 120_000.0
+    loop_demo.main()
+
+    out = capsys.readouterr().out
+    assert "blocked_by_policy" in out
+    assert loop_demo.LEDGER["111-1"] == 120_000.0
+    # ทั้ง ALLOW และ BLOCK ลง audit — log ที่มีแต่ของที่ถูกบล็อกแยกไม่ออกว่าระบบทำงานไหม
+    assert "audit  allow" in out and "audit  block" in out

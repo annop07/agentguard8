@@ -74,9 +74,7 @@ def test_callable_sink(policies: list[ToolPolicy]) -> None:
     guard.close()  # ไม่มีอะไรให้ปิด แต่ต้องไม่พัง
 
 
-def test_jsonl_sink_appends_one_line_per_event(
-    policies: list[ToolPolicy], tmp_path: Path
-) -> None:
+def test_jsonl_sink_appends_one_line_per_event(policies: list[ToolPolicy], tmp_path: Path) -> None:
     path = tmp_path / "nested" / "audit.jsonl"
     guard = Guard(policies=policies, audit_sink=JsonlSink(path))
     s = guard.session()

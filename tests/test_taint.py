@@ -113,9 +113,7 @@ class TestLedgerScan:
         return led
 
     def test_finds_the_tainted_field(self, ledger: TaintLedger) -> None:
-        hits = ledger.scan(
-            {"to_account": "999-9", "amount": 100}, ["to_account", "amount"]
-        )
+        hits = ledger.scan({"to_account": "999-9", "amount": 100}, ["to_account", "amount"])
         assert set(hits) == {"to_account"}
 
     def test_walks_into_nested_values(self, ledger: TaintLedger) -> None:

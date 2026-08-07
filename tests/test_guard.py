@@ -211,8 +211,6 @@ class TestToolError:
 
     def test_ordering_cheapest_check_first(self, context: dict) -> None:
         """scope ต้องตัดก่อน schema — tool ที่ไม่มีสิทธิ์ไม่ควรเดินไปถึงชั้นที่แพงกว่า"""
-        guard = Guard(
-            policies=[ToolPolicy("t", risk=RiskClass.WRITE, require=[Max("amount", 1)])]
-        )
+        guard = Guard(policies=[ToolPolicy("t", risk=RiskClass.WRITE, require=[Max("amount", 1)])])
         s = guard.session(forbidden_tools=["t"], context=context)
         assert s.check("t", {"amount": 999}).rule == "scope.forbidden_tools"
