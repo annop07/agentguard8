@@ -7,10 +7,10 @@
 
 ### วางแผนไว้สำหรับ 0.2.0
 
-- CLI — `agentguard lint` (ตรวจ policy ก่อน deploy) และ `agentguard replay`
+- CLI — `taintguard lint` (ตรวจ policy ก่อน deploy) และ `taintguard replay`
   (เล่น audit log ซ้ำกับ policy ชุดใหม่ เพื่อดูว่าจะบล็อกอะไรเพิ่มก่อนเปิดใช้จริง)
-- `agentguard[yaml]` — ประกาศ policy จากไฟล์
-- `agentguard[semantic]` — adapter ของ goal-drift เอา *เจตนา* มาเสริม *ที่มาของข้อมูล*
+- `taintguard[yaml]` — ประกาศ policy จากไฟล์
+- `taintguard[semantic]` — adapter ของ goal-drift เอา *เจตนา* มาเสริม *ที่มาของข้อมูล*
 - LangChain / OpenAI Agents SDK integration และ MCP proxy
 
 ## [0.1.0] — 2026-08-07
@@ -31,7 +31,7 @@
 **Rules** — `Max`, `Min`, `In`, `Matches`, `Present`, `Predicate` ประกาศเป็น Python object
 ที่ typed และเทสต์ได้ · กฎห้าม echo ค่า argument ลง `reason` เพื่อไม่ให้ค่าดิบรั่วลง audit
 
-**Adapters** (`agentguard.adapters`) — เสียบเข้าโค้ดที่มีอยู่แล้วได้สามทาง:
+**Adapters** (`taintguard.adapters`) — เสียบเข้าโค้ดที่มีอยู่แล้วได้สามทาง:
 
 | ทาง | พฤติกรรมตอนบล็อก | เหตุผล |
 | --- | --- | --- |

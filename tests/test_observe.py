@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentguard import Action, Guard, PolicyConfigError, Reason, ToolPolicy
+from taintguard import Action, Guard, PolicyConfigError, Reason, ToolPolicy
 
 
 def test_blocked_call_is_allowed_through_but_recorded(

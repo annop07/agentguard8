@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentguard import In, Matches, Max, Min, PolicyConfigError, Predicate, Present
+from taintguard import In, Matches, Max, Min, PolicyConfigError, Predicate, Present
 
 
 class TestMax:

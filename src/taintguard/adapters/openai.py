@@ -12,9 +12,9 @@ import json
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from agentguard.decisions import Action
-from agentguard.errors import PolicyConfigError
-from agentguard.guard import Session, current_session
+from taintguard.decisions import Action
+from taintguard.errors import PolicyConfigError
+from taintguard.guard import Session, current_session
 
 Dispatcher = Callable[[str, Mapping[str, Any]], Any]
 

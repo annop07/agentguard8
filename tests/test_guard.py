@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentguard import (
+from taintguard import (
     Action,
     ApprovalRequired,
     Blocked,

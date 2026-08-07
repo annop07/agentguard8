@@ -1,4 +1,4 @@
-"""Indirect prompt injection — ก่อนและหลังใส่ AgentGuard
+"""Indirect prompt injection — ก่อนและหลังใส่ TaintGuard
 
 รันได้เลย ไม่ต้องมี API key ไม่ต้องต่อเน็ต::
 
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 
-from agentguard import Guard, In, Max, RiskClass, Session, ToolPolicy
+from taintguard import Guard, In, Max, RiskClass, Session, ToolPolicy
 
 # ── ระบบสมมติ: ผู้ช่วยจัดการใบแจ้งหนี้ที่อ่านอีเมลจากซัพพลายเออร์ ────────────────
 
@@ -125,14 +125,14 @@ CONTEXT = {"known_suppliers": ["111-1", "222-2", "988-7712"]}
 
 def main() -> None:
     print("\n" + "═" * 72)
-    print("  ไม่มี AgentGuard")
+    print("  ไม่มี TaintGuard")
     print("═" * 72)
     _reset()
     run_agent(EMAIL_BODY, None)
     _report("💸")
 
     print("\n" + "═" * 72)
-    print("  มี AgentGuard")
+    print("  มี TaintGuard")
     print("═" * 72)
     _reset()
     guard = Guard(POLICIES, default_action="block")

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentguard import TaintLedger, normalize
+from taintguard import TaintLedger, normalize
 
 EMAIL = (
     "ขอบคุณที่ใช้บริการ ยอดรวม 250 บาท\n"

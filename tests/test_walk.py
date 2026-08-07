@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentguard._walk import MISSING, iter_scalars, lookup_path, text_of
+from taintguard._walk import MISSING, iter_scalars, lookup_path, text_of
 
 
 class TestLookupPath:

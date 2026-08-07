@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from agentguard import CallableSink, Guard, JsonlSink, MemorySink, ToolPolicy
-from agentguard.audit import AuditEvent, args_digest
+from taintguard import CallableSink, Guard, JsonlSink, MemorySink, ToolPolicy
+from taintguard.audit import AuditEvent, args_digest
 
 
 def test_allowed_calls_are_recorded_too(guard: Guard) -> None:

@@ -29,8 +29,8 @@ from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from agentguard._walk import MISSING, lookup_path
-from agentguard.errors import PolicyConfigError
+from taintguard._walk import MISSING, lookup_path
+from taintguard.errors import PolicyConfigError
 
 
 def _as_number(value: Any) -> float | None:

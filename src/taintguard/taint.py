@@ -22,7 +22,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any, Literal, SupportsIndex
 
-from agentguard._walk import MISSING, iter_scalars, lookup_path, text_of
+from taintguard._walk import MISSING, iter_scalars, lookup_path, text_of
 
 
 def _keep(char: str) -> bool:

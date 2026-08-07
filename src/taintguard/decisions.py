@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from agentguard.errors import ApprovalRequired, Blocked
+from taintguard.errors import ApprovalRequired, Blocked
 
 
 class Action(str, Enum):

@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentguard"
+name = "taintguard"
 version = "0.1.0"
 description = "Deterministic policy enforcement for AI agent tool calls."
 readme = "README.md"
@@ -33,14 +33,14 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agentguard"]
+packages = ["src/taintguard"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
 
 [tool.coverage.run]
-source = ["agentguard"]
+source = ["taintguard"]
 branch = true
 
 [tool.ruff]
@@ -52,11 +52,11 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
 # __all__ จัดกลุ่มตามหมวดพร้อมคอมเมนต์ อ่านง่ายกว่าเรียงตามตัวอักษรรวดเดียว
-"src/agentguard/__init__.py" = ["RUF022"]
+"src/taintguard/__init__.py" = ["RUF022"]
 # ไฟล์นี้ทดสอบพฤติกรรมของ % และ .format() โดยตรง เปลี่ยนเป็น f-string คือลบเทสต์ทิ้ง
 "tests/test_tainted_str.py" = ["UP031", "UP032"]
 
 [tool.mypy]
 python_version = "3.10"
 strict = true
-files = ["src/agentguard"]
+files = ["src/taintguard"]

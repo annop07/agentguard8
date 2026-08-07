@@ -17,9 +17,9 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from agentguard.decisions import Action
-from agentguard.errors import PolicyConfigError
-from agentguard.rules import Rule
+from taintguard.decisions import Action
+from taintguard.errors import PolicyConfigError
+from taintguard.rules import Rule
 
 TAINT_ALL = "*"
 

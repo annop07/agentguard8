@@ -29,7 +29,7 @@ def test_without_the_guard_the_money_leaves(demo: ModuleType) -> None:
 
 
 def test_with_the_guard_nothing_moves(demo: ModuleType) -> None:
-    from agentguard import Guard
+    from taintguard import Guard
 
     demo._reset()
     with Guard(demo.POLICIES, default_action="block").session(context=demo.CONTEXT) as session:
@@ -46,7 +46,7 @@ def test_only_the_taint_layer_stops_it(demo: ModuleType) -> None:
     เลขบัญชีของ attacker อยู่ใน known_suppliers และยอด 49,000 ต่ำกว่าเพดาน 50,000
     ถ้าชั้น taint ไม่มี เงินจะออกไปทั้งที่ policy เขียนไว้ครบถ้วนแล้ว
     """
-    from agentguard import Guard, Reason
+    from taintguard import Guard, Reason
 
     guard = Guard(demo.POLICIES, default_action="block")
     args = {"to_account": "988-7712", "amount": 49_000.0}
@@ -61,7 +61,7 @@ def test_only_the_taint_layer_stops_it(demo: ModuleType) -> None:
 
 def test_the_companys_own_account_is_trusted(demo: ModuleType) -> None:
     """111-1 โผล่ในอีเมลด้วย แต่เป็นบัญชีของบริษัทเอง — ต้องไม่ถูกจับ"""
-    from agentguard import Guard
+    from taintguard import Guard
 
     session = Guard(demo.POLICIES).session(context=demo.CONTEXT)
     session.taint(demo.EMAIL_BODY + " ref 111-1", source=demo.EMAIL_ID)

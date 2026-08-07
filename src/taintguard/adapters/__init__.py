@@ -4,7 +4,7 @@
 tool_call ของ OpenAI) ซึ่งเปลี่ยนตามคนอื่น ส่วน core เปลี่ยนตามกฎของตัวเอง
 """
 
-from agentguard.adapters.dispatcher import wrap_dispatcher
-from agentguard.adapters.openai import guarded_tool_result, parse_tool_call
+from taintguard.adapters.dispatcher import wrap_dispatcher
+from taintguard.adapters.openai import guarded_tool_result, parse_tool_call
 
 __all__ = ["guarded_tool_result", "parse_tool_call", "wrap_dispatcher"]

@@ -15,18 +15,18 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from agentguard.decisions import Decision
+    from taintguard.decisions import Decision
 
 
-class AgentGuardError(Exception):
+class TaintGuardError(Exception):
     """ฐานของ error ทุกตัวในแพ็กเกจ — จับตัวเดียวได้ทั้งหมด"""
 
 
-class PolicyConfigError(AgentGuardError):
+class PolicyConfigError(TaintGuardError):
     """policy เขียนผิดตั้งแต่ตอนประกาศ (คนละเรื่องกับ tool call ที่ผิดกฎ)"""
 
 
-class Blocked(AgentGuardError):
+class Blocked(TaintGuardError):
     """tool call ถูกบล็อกโดย policy"""
 
     def __init__(self, decision: Decision) -> None:
@@ -34,7 +34,7 @@ class Blocked(AgentGuardError):
         super().__init__(f"{decision.tool}: {decision.reason}")
 
 
-class ApprovalRequired(AgentGuardError):
+class ApprovalRequired(TaintGuardError):
     """tool call ต้องให้คนอนุมัติก่อน
 
     ผู้เรียกตัดสินใจแล้วเรียก ``approve()`` หรือ ``deny()`` — ตัว exception ถือสถานะไว้

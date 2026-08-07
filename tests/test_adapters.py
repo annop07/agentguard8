@@ -14,7 +14,7 @@ from types import SimpleNamespace
 import pytest
 from pydantic import BaseModel, Field
 
-from agentguard import (
+from taintguard import (
     ApprovalRequired,
     Blocked,
     Guard,
@@ -24,8 +24,8 @@ from agentguard import (
     RiskClass,
     ToolPolicy,
 )
-from agentguard.adapters import guarded_tool_result, parse_tool_call, wrap_dispatcher
-from agentguard.guard import current_session
+from taintguard.adapters import guarded_tool_result, parse_tool_call, wrap_dispatcher
+from taintguard.guard import current_session
 
 
 class TransferArgs(BaseModel):

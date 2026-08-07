@@ -9,7 +9,7 @@ from __future__ import annotations
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
-from agentguard import TaintLedger, normalize
+from taintguard import TaintLedger, normalize
 
 # ตัวอักษรหลายระบบเขียนปนกัน — ไทยคือกรณีที่ตัวกรอง ASCII-only จะพัง
 ALPHABET = st.sampled_from(

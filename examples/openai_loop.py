@@ -1,4 +1,4 @@
-"""tool-calling loop แบบ OpenAI ที่มี AgentGuard คั่นอยู่ — รันได้เลย ไม่ต้องมี API key::
+"""tool-calling loop แบบ OpenAI ที่มี TaintGuard คั่นอยู่ — รันได้เลย ไม่ต้องมี API key::
 
     python examples/openai_loop.py
 
@@ -17,8 +17,8 @@ import json
 from types import SimpleNamespace
 from typing import Any
 
-from agentguard import Guard, In, Max, RiskClass, ToolPolicy
-from agentguard.adapters import guarded_tool_result
+from taintguard import Guard, In, Max, RiskClass, ToolPolicy
+from taintguard.adapters import guarded_tool_result
 
 LEDGER = {"111-1": 120_000.0}
 
@@ -78,7 +78,7 @@ def main() -> None:
                 break
 
             for call in calls:
-                # นี่คือบรรทัดเดียวที่ต่างจาก loop ที่ไม่มี AgentGuard
+                # นี่คือบรรทัดเดียวที่ต่างจาก loop ที่ไม่มี TaintGuard
                 message = guarded_tool_result(call, dispatch=dispatch, session=session)
                 messages.append(message)
 

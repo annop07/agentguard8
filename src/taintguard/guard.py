@@ -22,18 +22,18 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
-from agentguard.audit import AuditEvent, AuditSink
-from agentguard.decisions import Action, Decision, Reason
-from agentguard.errors import PolicyConfigError
-from agentguard.policy import ToolPolicy
-from agentguard.taint import TaintLedger, TaintMatch, spans_of
+from taintguard.audit import AuditEvent, AuditSink
+from taintguard.decisions import Action, Decision, Reason
+from taintguard.errors import PolicyConfigError
+from taintguard.policy import ToolPolicy
+from taintguard.taint import TaintLedger, TaintMatch, spans_of
 
 Mode = Literal["enforce", "observe"]
 OnBlock = Literal["raise", "return"]
 
 F = TypeVar("F", bound=Callable[..., Any])
 
-_current_session: ContextVar[Session | None] = ContextVar("agentguard_session", default=None)
+_current_session: ContextVar[Session | None] = ContextVar("taintguard_session", default=None)
 
 
 def current_session() -> Session | None:
@@ -125,7 +125,7 @@ class Guard:
         ``@guard.protect(risk=..., taint_fields=[...])`` ประกาศ policy ให้ฟังก์ชันนั้นไปเลย
         ส่วน ``@guard.protect`` เปล่าๆ ใช้ policy ที่ประกาศไว้แล้วตามชื่อฟังก์ชัน
 
-        เส้นทางนี้ **raise** ต่างจาก :func:`~agentguard.adapters.wrap_dispatcher` ที่คืน
+        เส้นทางนี้ **raise** ต่างจาก :func:`~taintguard.adapters.wrap_dispatcher` ที่คืน
         error dict — เพราะ caller ที่เรียกฟังก์ชันตรงๆ รอค่าจริง การคืน dict บอกความผิดพลาด
         ให้เขาคือการซ่อนความล้มเหลวไว้ในค่าที่หน้าตาเหมือนผลลัพธ์
 
@@ -238,7 +238,7 @@ class Session:
         self._ledger.add(text, source=source, label=label)
 
     def attach(self, value: object) -> int:
-        """ดูด span ที่ติดมากับ :class:`~agentguard.taint.TaintedStr` เข้า ledger
+        """ดูด span ที่ติดมากับ :class:`~taintguard.taint.TaintedStr` เข้า ledger
 
         คืนจำนวน span ที่เพิ่ม — ``0`` แปลว่าค่านั้นเป็น ``str`` ธรรมดา ซึ่งมักหมายความว่า
         เครื่องหมายหายไประหว่างทาง (f-string เป็นสาเหตุที่พบบ่อยที่สุด)

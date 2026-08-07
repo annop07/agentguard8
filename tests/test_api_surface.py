@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agentguard import (
+from taintguard import (
     Action,
     ApprovalRequired,
     Guard,
@@ -12,7 +12,7 @@ from agentguard import (
     RiskClass,
     ToolPolicy,
 )
-from agentguard.policy import TAINT_ALL
+from taintguard.policy import TAINT_ALL
 
 
 class TestDecisionRepr:

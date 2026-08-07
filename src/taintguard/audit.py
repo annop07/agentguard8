@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
-from agentguard.decisions import Action, Decision
+from taintguard.decisions import Action, Decision
 
 
 def args_digest(args: dict[str, Any]) -> str:

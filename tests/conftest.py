@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import BaseModel, Field
 
-from agentguard import Guard, In, Max, RiskClass, ToolPolicy
+from taintguard import Guard, In, Max, RiskClass, ToolPolicy
 
 
 class TransferArgs(BaseModel):
