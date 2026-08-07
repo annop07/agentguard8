@@ -1,6 +1,16 @@
 # AgentGuard
 
+[![PyPI](https://img.shields.io/pypi/v/agentguard.svg)](https://pypi.org/project/agentguard/)
+[![Python](https://img.shields.io/pypi/pyversions/agentguard.svg)](https://pypi.org/project/agentguard/)
+[![CI](https://github.com/annop07/agentguard8/actions/workflows/ci.yml/badge.svg)](https://github.com/annop07/agentguard8/actions/workflows/ci.yml)
+[![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](#พัฒนา)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 > Deterministic policy enforcement for AI agent tool calls.
+
+```bash
+pip install agentguard
+```
 
 AI agent ที่เรียก tool ได้เอง มีช่องโหว่ที่โค้ดปกติไม่มี — **ข้อมูลที่ agent อ่าน
 กลายเป็นคำสั่งที่ agent ทำตามได้** attacker ไม่ต้องเข้าถึงระบบ แค่ฝากข้อความไว้ในอีเมล
@@ -9,8 +19,9 @@ AI agent ที่เรียก tool ได้เอง มีช่องโ�
 AgentGuard คั่นระหว่าง "LLM บอกว่าจะเรียก tool อะไร" กับ "tool ทำงานจริง" โดยตัดสินจาก
 policy, argument และที่มาของข้อมูลเท่านั้น — ไม่มีโมเดล ไม่มีการสุ่ม input เดิมได้ผลเดิมเสมอ
 
-> **สถานะ:** อยู่ระหว่างพัฒนา (`0.1.0.dev0`) — ชั้นบังคับใช้ครบทั้ง 7 ขั้นแล้ว
-> เหลือ adapters, CLI และการปล่อยขึ้น PyPI · ดู [SPEC.md](SPEC.md)
+> **สถานะ:** `0.1.0` — ชั้นบังคับใช้ครบทั้ง 7 ขั้น พร้อม adapters ทั้งสามทาง
+> `agentguard lint` / `replay` และ policy จาก YAML เป็นเป้าหมาย v0.2 ·
+> ดู [SPEC.md](SPEC.md) และ [CHANGELOG.md](CHANGELOG.md)
 
 ## ดูของจริงก่อน
 
@@ -48,9 +59,11 @@ python examples/injection_demo.py
 from pydantic import BaseModel, Field
 from agentguard import Guard, ToolPolicy, RiskClass, Max, In
 
+
 class TransferArgs(BaseModel):
     to_account: str
     amount: float = Field(gt=0)
+
 
 guard = Guard(
     policies=[
@@ -63,7 +76,7 @@ guard = Guard(
             max_calls_per_session=1,
         ),
     ],
-    default_action="block",      # tool ที่ไม่มี policy → บล็อก
+    default_action="block",  # tool ที่ไม่มี policy → บล็อก
 )
 
 with guard.session(context={"own_accounts": ["111-1", "222-2"]}) as s:
@@ -81,9 +94,10 @@ BLOCK    transfer_money  invariant_breach · to_account is not in the allowed se
 ใช้ได้กับทุก loop ที่เขียนตาม OpenAI function calling ไม่ว่าจะเขียนเองหรือใช้ SDK:
 
 ```python
-decision = s.check(tc.function.name, args)                       # +1 บรรทัด
-result = dispatch(tc.function.name, args) if decision.allowed \
-         else decision.as_tool_error()                           # +1 บรรทัด
+decision = s.check(tc.function.name, args)  # +1 บรรทัด
+result = (
+    dispatch(tc.function.name, args) if decision.allowed else decision.as_tool_error()
+)  # +1 บรรทัด
 ```
 
 `as_tool_error()` คืน payload รูปแบบคงที่ให้ LLM เห็นแล้วแก้เองได้ในรอบถัดไป:
@@ -94,6 +108,39 @@ result = dispatch(tc.function.name, args) if decision.allowed \
 ```
 
 `retryable` บอก LLM ว่าลองใหม่ด้วยค่าอื่นแล้วมีโอกาสผ่านไหม — กันไม่ให้มันวนซ้ำจนหมด iteration
+
+### สามทางเข้า — เลือกตามว่าโค้ดเดิมเรียกอะไร
+
+```python
+from agentguard.adapters import wrap_dispatcher, guarded_tool_result
+
+guarded = wrap_dispatcher(dispatch)  # มี dispatcher อยู่แล้ว — signature เดิม
+messages.append(guarded_tool_result(tc, dispatch=dispatch))  # loop แบบ OpenAI
+```
+
+```python
+@guard.protect(risk=RiskClass.CRITICAL, taint_fields=["to_account"])
+def transfer_money(to_account: str, amount: float) -> dict: ...
+```
+
+decorator หา session จาก `contextvars` — ไม่ต้องส่ง session ไปทุกชั้นของ call stack และ
+ใช้กับ `async def` ได้ ฟังก์ชันที่ถูกครอบแต่ถูกเรียกนอก `with guard.session(...)` จะ **raise**
+ไม่ใช่ปล่อยผ่าน เพราะการปล่อยผ่านเงียบๆ คือการปิดชั้นบังคับใช้โดยไม่มีใครรู้
+
+**พฤติกรรมตอนถูกบล็อกต่างกันตามทางเข้า** — ตั้งใจ ไม่ใช่ความไม่สม่ำเสมอ:
+
+| ทาง | default | เหตุผล |
+| --- | --- | --- |
+| `s.check()` | คืน `Decision` | ผู้เรียกตัดสินใจเอง |
+| `wrap_dispatcher()` | คืน error dict | อยู่ใน loop — raise จะพังทั้งรอบ ทั้งที่ LLM แก้เองได้ |
+| `@guard.protect` | raise `Blocked` | เรียกฟังก์ชันตรงๆ การคืน dict คือการซ่อนความล้มเหลว |
+
+สลับได้ด้วย `on_block="return" \| "raise"` ทั้งสองทาง ส่วน `ESCALATE` raise
+`ApprovalRequired` เสมอทุกทาง เพราะยังไม่มีคำตอบให้คืนจนกว่าคนจะตัดสิน
+
+```bash
+python examples/openai_loop.py     # loop เต็มๆ พร้อม stub LLM ไม่ต้องมี API key
+```
 
 ## ติดตั้งลงระบบที่ทำงานอยู่แล้ว
 
@@ -128,7 +175,7 @@ Guard(policies=[...], mode="observe")
 
 ```python
 s.taint(email.body, source="email:4821", label="untrusted_email")
-s.trust(user.own_account)     # ค่าที่ปลอดภัยเสมอ แม้จะโผล่ในข้อความที่ taint ไว้
+s.trust(user.own_account)  # ค่าที่ปลอดภัยเสมอ แม้จะโผล่ในข้อความที่ taint ไว้
 ```
 
 จากนั้นทุก tool call ที่ความเสี่ยงสูงพอจะถูกถามว่า argument ของมัน **สืบสายมาจาก**
@@ -165,6 +212,7 @@ s.trust(user.own_account)     # ค่าที่ปลอดภัยเสม
 
 ```python
 from agentguard import Guard, JsonlSink
+
 Guard(policies=[...], audit_sink=JsonlSink("audit.jsonl"))
 ```
 

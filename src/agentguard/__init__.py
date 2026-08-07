@@ -17,7 +17,7 @@ from agentguard.policy import RiskClass, ToolPolicy
 from agentguard.rules import In, Matches, Max, Min, Predicate, Present, Rule
 from agentguard.taint import TaintedStr, TaintLedger, TaintMatch, TaintSpan, normalize, tainted
 
-__version__ = "0.1.0.dev0"
+__version__ = "0.1.0"
 
 __all__ = [
     # core

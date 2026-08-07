@@ -10,11 +10,14 @@ tool call ที่ไม่มีสิทธิ์ตั้งแต่ต้�
 
 from __future__ import annotations
 
+import inspect
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
+from contextvars import ContextVar, Token
 from dataclasses import replace
+from functools import wraps
 from types import TracebackType
-from typing import Any, Literal
+from typing import Any, Literal, TypeVar, cast
 from uuid import uuid4
 
 from pydantic import ValidationError
@@ -26,6 +29,21 @@ from agentguard.policy import ToolPolicy
 from agentguard.taint import TaintLedger, TaintMatch, spans_of
 
 Mode = Literal["enforce", "observe"]
+OnBlock = Literal["raise", "return"]
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+_current_session: ContextVar[Session | None] = ContextVar("agentguard_session", default=None)
+
+
+def current_session() -> Session | None:
+    """session ของ ``with guard.session(...)`` ที่กำลังทำงานอยู่ในบริบทนี้
+
+    ใช้ ``contextvars`` ไม่ใช่ตัวแปร global เพราะ agent หลายตัวที่รันพร้อมกัน — thread หรือ
+    task — ต้องเห็น session ของตัวเองเท่านั้น ``ContextVar`` ถูกคัดลอกตอนสร้าง task
+    การเรียก ``await`` ระหว่างนั้นจึงไม่ทำให้ session สลับกัน
+    """
+    return _current_session.get()
 
 
 def _normalise_default_action(value: Action | str) -> Action:
@@ -94,6 +112,83 @@ class Guard:
             session_id=session_id,
         )
 
+    def protect(
+        self,
+        _fn: F | None = None,
+        *,
+        name: str | None = None,
+        on_block: OnBlock = "raise",
+        **policy_kwargs: Any,
+    ) -> F | Callable[[F], F]:
+        """ครอบฟังก์ชันให้ผ่าน :meth:`Session.check` ก่อนทำงานจริง
+
+        ``@guard.protect(risk=..., taint_fields=[...])`` ประกาศ policy ให้ฟังก์ชันนั้นไปเลย
+        ส่วน ``@guard.protect`` เปล่าๆ ใช้ policy ที่ประกาศไว้แล้วตามชื่อฟังก์ชัน
+
+        เส้นทางนี้ **raise** ต่างจาก :func:`~agentguard.adapters.wrap_dispatcher` ที่คืน
+        error dict — เพราะ caller ที่เรียกฟังก์ชันตรงๆ รอค่าจริง การคืน dict บอกความผิดพลาด
+        ให้เขาคือการซ่อนความล้มเหลวไว้ในค่าที่หน้าตาเหมือนผลลัพธ์
+
+        session มาจาก ``contextvars`` — ไม่ต้องส่งผ่านทุกชั้นของ call stack ฟังก์ชันที่ถูก
+        ครอบแต่ถูกเรียกนอก ``with guard.session(...)`` จะ raise เพราะไม่มีทางตรวจได้ และ
+        การปล่อยผ่านเงียบๆ คือการปิดชั้นบังคับใช้โดยไม่มีใครรู้
+        """
+
+        def decorate(fn: F) -> F:
+            tool = name or fn.__name__
+            if policy_kwargs:
+                self.register(ToolPolicy(name=tool, **policy_kwargs))
+            signature = inspect.signature(fn)
+
+            def resolve(args: tuple[Any, ...], kwargs: dict[str, Any]) -> tuple[Any, ...]:
+                bound = signature.bind(*args, **kwargs)
+                bound.apply_defaults()
+                session = _require_session(tool)
+                decision = session.check(tool, dict(bound.arguments))
+                if not decision.allowed:
+                    if on_block == "return":
+                        return (False, decision.as_tool_error())
+                    decision.raise_for_action(dict(bound.arguments))
+                # กฎตรวจค่าที่ผ่าน args_model แล้ว ถ้าเรียก tool ด้วยค่าดิบ tool จะได้คนละค่า
+                if decision.validated_args is not None:
+                    bound.arguments.update(decision.validated_args)
+                return (True, bound)
+
+            if inspect.iscoroutinefunction(fn):
+
+                @wraps(fn)
+                async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                    ok, payload = resolve(args, kwargs)
+                    if not ok:
+                        return payload
+                    bound = cast(inspect.BoundArguments, payload)
+                    return await cast(Awaitable[Any], fn(*bound.args, **bound.kwargs))
+
+                return cast(F, async_wrapper)
+
+            @wraps(fn)
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
+                ok, payload = resolve(args, kwargs)
+                if not ok:
+                    return payload
+                bound = cast(inspect.BoundArguments, payload)
+                return fn(*bound.args, **bound.kwargs)
+
+            return cast(F, wrapper)
+
+        # รองรับทั้ง @guard.protect และ @guard.protect(...)
+        return decorate if _fn is None else decorate(_fn)
+
+    def register(self, policy: ToolPolicy) -> None:
+        """เพิ่ม policy หลังสร้าง ``Guard`` แล้ว — สำหรับ :meth:`protect` ที่ประกาศตอน import
+
+        ยังห้ามซ้ำเหมือนตอนสร้าง: policy สองอันสำหรับ tool เดียวกันแปลว่าอันหนึ่งไม่ถูกใช้
+        และไม่มีทางรู้จากโค้ดว่าอันไหน
+        """
+        if policy.name in self.policies:
+            raise PolicyConfigError(f"มี policy ซ้ำสำหรับ tool {policy.name!r}")
+        self.policies[policy.name] = policy
+
     def close(self) -> None:
         if self.audit_sink is not None:
             self.audit_sink.close()
@@ -129,9 +224,8 @@ class Session:
 
         self._events: list[AuditEvent] = []
         self._counts: Counter[str] = Counter()
-        self._ledger = TaintLedger(
-            min_match_chars=guard.min_match_chars, ngram_k=guard.ngram_k
-        )
+        self._token: Token[Session | None] | None = None
+        self._ledger = TaintLedger(min_match_chars=guard.min_match_chars, ngram_k=guard.ngram_k)
 
     # ── provenance ────────────────────────────────────────────────────────
 
@@ -339,16 +433,19 @@ class Session:
         stats = {"allowed": 0, "blocked": 0, "escalated": 0, "suppressed": 0}
         for event in self._events:
             effective = event.observed_action or event.action
-            stats[{
-                Action.ALLOW: "allowed",
-                Action.BLOCK: "blocked",
-                Action.ESCALATE: "escalated",
-            }[effective]] += 1
+            stats[
+                {
+                    Action.ALLOW: "allowed",
+                    Action.BLOCK: "blocked",
+                    Action.ESCALATE: "escalated",
+                }[effective]
+            ] += 1
             if event.observed_action is not None:
                 stats["suppressed"] += 1
         return stats
 
     def __enter__(self) -> Session:
+        self._token = _current_session.set(self)
         return self
 
     def __exit__(
@@ -357,7 +454,22 @@ class Session:
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
+        # reset ด้วย token ไม่ใช่ set(None) เพื่อให้ session ที่ซ้อนกันคืนค่าเป็นชั้นนอก
+        # ไม่ใช่ "ไม่มี session" ซึ่งจะทำให้ decorator ในชั้นนอกพังหลังชั้นในจบ
+        token, self._token = self._token, None
+        if token is not None:
+            _current_session.reset(token)
         return None
+
+
+def _require_session(tool: str) -> Session:
+    session = _current_session.get()
+    if session is None:
+        raise PolicyConfigError(
+            f"{tool!r} ถูกครอบด้วย @guard.protect แต่ถูกเรียกนอก with guard.session(...) — "
+            "ไม่มี session ให้ตรวจ และการปล่อยผ่านเงียบๆ คือการปิดชั้นบังคับใช้"
+        )
+    return session
 
 
 def _summarise_validation_errors(errors: list[Any]) -> str:

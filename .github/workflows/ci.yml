@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # ทุกเวอร์ชันที่ประกาศไว้ใน classifiers — classifier ที่ไม่มี CI คุมคือคำสัญญาลอยๆ
+        python: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install ${{ matrix.python }}
+      - run: uv venv --python ${{ matrix.python }}
+      - run: uv pip install -e ".[dev]"
+
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
+
+      # ทั้ง suite รันได้โดยไม่ต้องมี API key และไม่ต่อเน็ต — core ไม่มีโมเดลอยู่ในนั้นเลย
+      - run: uv run pytest --cov --cov-fail-under=90
+
+      # เดโมคือสิ่งที่คนอ่าน README จะรันเป็นอย่างแรก ถ้ามันพังก็ไม่มีประโยชน์ที่เทสต์ผ่าน
+      - run: uv run python examples/injection_demo.py

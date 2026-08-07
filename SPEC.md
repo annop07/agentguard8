@@ -102,11 +102,21 @@ attacker ที่หลบ similarity ได้ ยังหลบ provenance �
 
 ```python
 from agentguard import (
-    Guard, Session, RiskClass, ToolPolicy,     # core
-    Max, Min, In, Matches, Predicate,          # rules
-    Decision, Action, Reason,                  # results
-    Blocked, ApprovalRequired,                 # exceptions
-    tainted,                                   # TaintedStr helper
+    Guard,
+    Session,
+    RiskClass,
+    ToolPolicy,  # core
+    Max,
+    Min,
+    In,
+    Matches,
+    Predicate,  # rules
+    Decision,
+    Action,
+    Reason,  # results
+    Blocked,
+    ApprovalRequired,  # exceptions
+    tainted,  # TaintedStr helper
 )
 ```
 
@@ -117,8 +127,8 @@ from agentguard import Guard, ToolPolicy, RiskClass, Max, In
 
 guard = Guard(
     policies=[
-        ToolPolicy("get_invoice",   risk=RiskClass.READ),
-        ToolPolicy("search_docs",   risk=RiskClass.READ),
+        ToolPolicy("get_invoice", risk=RiskClass.READ),
+        ToolPolicy("search_docs", risk=RiskClass.READ),
         ToolPolicy(
             "transfer_money",
             risk=RiskClass.CRITICAL,
@@ -128,7 +138,7 @@ guard = Guard(
             max_calls_per_session=1,
         ),
     ],
-    default_action="block",      # tool ที่ไม่มี policy → บล็อก (fail closed)
+    default_action="block",  # tool ที่ไม่มี policy → บล็อก (fail closed)
 )
 
 with guard.session(
@@ -183,8 +193,8 @@ policy ระดับแอปตอบว่า "tool นี้มีกฎอ
 "**run นี้** แตะ tool ไหนได้บ้าง" ซึ่งเป็นคนละคำถาม
 
 ```python
-guard.session(allowed_tools=[...])      # allowlist — นอกรายการ = บล็อก
-guard.session(forbidden_tools=[...])    # denylist — ที่เหลืออนุญาต
+guard.session(allowed_tools=[...])  # allowlist — นอกรายการ = บล็อก
+guard.session(forbidden_tools=[...])  # denylist — ที่เหลืออนุญาต
 ```
 
 ใช้ตอนที่ agent ตัวเดียวถูกเรียกในหลายบริบท เช่น flow ที่ user ยังไม่ยืนยันตัวตน
@@ -226,8 +236,8 @@ untrusted text ──┬──[ ครึ่งแรก: TaintedStr ]──▶ 
 from agentguard import tainted
 
 body = tainted(email.body, source="email:4821", label="untrusted_email")
-prompt = f"สรุปอีเมลนี้:\n{body}"        # ยังคงสถานะ taint ผ่าน f-string / + / join / %
-s.attach(prompt)                          # ทุก span ที่ปนอยู่เข้า ledger อัตโนมัติ
+prompt = f"สรุปอีเมลนี้:\n{body}"  # ยังคงสถานะ taint ผ่าน f-string / + / join / %
+s.attach(prompt)  # ทุก span ที่ปนอยู่เข้า ledger อัตโนมัติ
 ```
 
 `TaintedStr` เป็น subclass ของ `str` ที่ override `__add__`, `__radd__`, `__mod__`,
@@ -269,26 +279,27 @@ provenance จับ argument ที่ *คัดลอกมา* จาก unt
 
 ```python
 class Reason(str, Enum):
-    UNAUTHORIZED_TOOL = "unauthorized_tool"   # ไม่มี policy / ไม่อยู่ใน allowed_tools
-    INVALID_ARGUMENTS = "invalid_arguments"   # schema ไม่ผ่าน
-    INVARIANT_BREACH  = "invariant_breach"    # ผิดกฎใน require=[...]
-    TAINTED_ARGUMENT  = "tainted_argument"    # argument สืบสายมาจาก untrusted source
-    BUDGET_EXCEEDED   = "budget_exceeded"     # เกิน max_calls_per_session
-    APPROVAL_REQUIRED = "approval_required"   # ต้องให้คนอนุมัติ
+    UNAUTHORIZED_TOOL = "unauthorized_tool"  # ไม่มี policy / ไม่อยู่ใน allowed_tools
+    INVALID_ARGUMENTS = "invalid_arguments"  # schema ไม่ผ่าน
+    INVARIANT_BREACH = "invariant_breach"  # ผิดกฎใน require=[...]
+    TAINTED_ARGUMENT = "tainted_argument"  # argument สืบสายมาจาก untrusted source
+    BUDGET_EXCEEDED = "budget_exceeded"  # เกิน max_calls_per_session
+    APPROVAL_REQUIRED = "approval_required"  # ต้องให้คนอนุมัติ
+
 
 @dataclass(frozen=True)
 class Decision:
-    action: Action              # ALLOW | BLOCK | ESCALATE
+    action: Action  # ALLOW | BLOCK | ESCALATE
     tool: str
-    code: Reason | None         # เสถียร — ใช้ aggregate ใน log/alert
-    rule: str | None            # granular — "taint.to_account", "require.Max(amount)"
-    reason: str                 # ข้อความอ่านรู้เรื่อง เข้าทั้ง audit และ error ที่ส่งกลับ LLM
-    evidence: dict              # {"source": "email:4821", "matched": "999-9"}
+    code: Reason | None  # เสถียร — ใช้ aggregate ใน log/alert
+    rule: str | None  # granular — "taint.to_account", "require.Max(amount)"
+    reason: str  # ข้อความอ่านรู้เรื่อง เข้าทั้ง audit และ error ที่ส่งกลับ LLM
+    evidence: dict  # {"source": "email:4821", "matched": "999-9"}
 
     @property
     def allowed(self) -> bool: ...
     def as_tool_error(self) -> dict: ...
-    def raise_for_action(self) -> None: ...   # → Blocked / ApprovalRequired
+    def raise_for_action(self) -> None: ...  # → Blocked / ApprovalRequired
 ```
 
 `code` กับ `rule` มีคู่กันตั้งใจ: `code` เสถียรพอจะตั้ง alert ใน SIEM ได้
@@ -315,8 +326,15 @@ s.stats -> dict                     # {"allowed": 4, "blocked": 1, "escalated": 
 
 ```python
 AuditEvent(
-    ts, session_id, tool, action, code, rule, reason, evidence,
-    args_digest,       # sha256 ของ args — ไม่เก็บค่าดิบ กัน PII รั่วลง log
+    ts,
+    session_id,
+    tool,
+    action,
+    code,
+    rule,
+    reason,
+    evidence,
+    args_digest,  # sha256 ของ args — ไม่เก็บค่าดิบ กัน PII รั่วลง log
 )
 ```
 
@@ -335,8 +353,8 @@ Sinks: `MemorySink` (default), `JsonlSink(path)`, `CallableSink(fn)`
 ### 5.9 โหมดการทำงาน
 
 ```python
-Guard(mode="enforce")   # default — บังคับใช้จริง
-Guard(mode="observe")   # ตัดสินครบทุกชั้น เขียน audit ครบ แต่คืน ALLOW เสมอ
+Guard(mode="enforce")  # default — บังคับใช้จริง
+Guard(mode="observe")  # ตัดสินครบทุกชั้น เขียน audit ครบ แต่คืน ALLOW เสมอ
 ```
 
 โหมด `observe` คือขั้นแรกของการติดตั้งลงระบบที่ทำงานอยู่แล้ว (ดู §12 เส้นทาง rollout) —
@@ -388,12 +406,14 @@ Guard(mode="observe")   # ตัดสินครบทุกชั้น เ�
 for tc in choice.tool_calls:
     args = json.loads(tc.function.arguments or "{}")
 
-    decision = s.check(tc.function.name, args)                       # +1 บรรทัด
-    result = dispatch(tc.function.name, args) if decision.allowed \
-             else decision.as_tool_error()                           # +1 บรรทัด
+    decision = s.check(tc.function.name, args)  # +1 บรรทัด
+    result = (
+        dispatch(tc.function.name, args) if decision.allowed else decision.as_tool_error()
+    )  # +1 บรรทัด
 
-    messages.append({"role": "tool", "tool_call_id": tc.id,
-                     "content": json.dumps(result, ensure_ascii=False)})
+    messages.append(
+        {"role": "tool", "tool_call_id": tc.id, "content": json.dumps(result, ensure_ascii=False)}
+    )
 ```
 
 LLM เห็น error แล้วแก้เองได้ในรอบถัดไปของ loop — ไม่ต้องแตะโครงสร้าง loop เลย
@@ -402,7 +422,8 @@ LLM เห็น error แล้วแก้เองได้ในรอบถ
 
 ```python
 from agentguard.adapters import wrap_dispatcher
-guarded = wrap_dispatcher(dispatch, session=s)     # signature เดิม (name, args) -> dict
+
+guarded = wrap_dispatcher(dispatch, session=s)  # signature เดิม (name, args) -> dict
 ```
 
 ### 7.3 Decorator
@@ -466,8 +487,8 @@ agentguard/
 │   ├── decisions.py         Decision, Action, Reason, PendingCall
 │   ├── audit.py             AuditEvent, MemorySink/JsonlSink/CallableSink
 │   ├── errors.py            Blocked, ApprovalRequired, PolicyConfigError
-│   ├── config.py            โหลด policy จาก YAML/TOML (extra: [yaml])
-│   ├── _cli.py              agentguard lint | replay
+│   ├── config.py            โหลด policy จาก YAML/TOML (extra: [yaml]) — v0.2
+│   ├── _cli.py              agentguard lint | replay — v0.2
 │   └── adapters/
 │       ├── dispatcher.py    wrap_dispatcher()
 │       └── openai.py        tool-loop helper
@@ -557,24 +578,29 @@ Badges ใน README: PyPI version · Python versions · CI · coverage · licen
 | 7 | adapters: `wrap_dispatcher`, openai helper, decorator + contextvar | เสียบของจริงได้ทุกทาง |
 | 8 | `examples/injection_demo.py` + agent จำลอง + stub LLM | เดโมรันได้ |
 | 9 | red-team corpus (TH+EN) + จูน `min_match_chars`/`ngram_k` | ตัวเลข default มีเหตุผลรองรับ ไม่ใช่เดา |
-| 10 | CLI: `agentguard lint`, `agentguard replay` | CLI ใช้ได้ |
+| ~~10~~ | ~~CLI: `agentguard lint`, `agentguard replay`~~ | **เลื่อนไป v0.2** — ปล่อย 0.1.0 ด้วย core + adapters ที่เสร็จและมีเทสต์คุมครบ ดีกว่าถือของไว้รอฟีเจอร์ที่ไม่ได้อยู่บนเส้นทางวิกฤต |
 | 11 | README + badges + API docs + CHANGELOG | เอกสารครบ |
 | 12 | CI matrix + Trusted Publishing + ปล่อย TestPyPI | `pip install -i testpypi agentguard` ผ่าน |
 | 13 | ปล่อย PyPI `0.1.0` + อัด demo GIF | `pip install agentguard` ✅ |
 | 14 | buffer · เขียนโพสต์สรุป · spike goal-drift adapter สำหรับ v0.2 | ปิดงาน |
 
-**นอกขอบเขต v0.1 (ตั้งใจ):** `agentguard[semantic]` goal-drift adapter, LangChain / OpenAI Agents SDK
-integration, MCP proxy → ทั้งหมดเป็นเป้าหมาย v0.2
+**นอกขอบเขต v0.1 (ตั้งใจ):** CLI (`lint` / `replay`), `agentguard[yaml]`,
+`agentguard[semantic]` goal-drift adapter, LangChain / OpenAI Agents SDK integration,
+MCP proxy → ทั้งหมดเป็นเป้าหมาย v0.2
 
 ---
 
 ## 13. Definition of Done
 
-- [ ] **โมดูลสะอาด + unit tests** — public API ≤ 14 ชื่อ, `mypy --strict` ผ่าน, coverage ≥ 90%
-- [ ] **CI/CD → PyPI** — GitHub Actions matrix 4 เวอร์ชัน + release job ด้วย Trusted Publishing
-- [ ] **README + badges** — attack demo ขึ้นก่อน API, quick start รันได้จริง, ตาราง skill → ไฟล์
-- [ ] **`pip install agentguard` ใช้ได้จริง**
-- [ ] **เดโม injection รันได้ในเครื่องเปล่า** ไม่ต้องมี API key ไม่ต้องต่อเน็ต
+- [x] **โมดูลสะอาด + unit tests** — `mypy --strict` ผ่าน, **coverage 100%** (เป้า ≥ 90%)
+      · public API 30 ชื่อ ไม่ใช่ ≤ 14 อย่างที่ประมาณไว้ตอนแรก — ส่วนที่โตคือ rules
+      (`Max`/`Min`/`In`/`Matches`/`Present`/`Predicate`) กับ sinks ซึ่งเป็นของที่ผู้ใช้
+      ต้องหยิบมาประกอบเอง การซ่อนไว้หลัง namespace เดียวจะทำให้ import ยากขึ้นโดยไม่ได้อะไร
+- [x] **CI/CD → PyPI** — matrix 3.10–3.13 (ruff · ruff format · mypy · pytest --cov ≥ 90 · เดโม)
+      + release job: build → TestPyPI → smoke `pip install` → PyPI ด้วย Trusted Publishing
+- [x] **README + badges** — attack demo ขึ้นก่อน API, quick start รันได้จริง
+- [ ] **`pip install agentguard` ใช้ได้จริง** — รอ push tag `v0.1.0`
+- [x] **เดโม injection รันได้ในเครื่องเปล่า** ไม่ต้องมี API key ไม่ต้องต่อเน็ต (CI รันทุกครั้ง)
 
 ---
 

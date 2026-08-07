@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+# ไม่มี API token ใน secrets เลย — PyPI ยืนยันตัวตนของ workflow นี้ผ่าน OIDC
+# (Trusted Publishing) token ที่รั่วไม่ได้เพราะไม่มี token ให้รั่ว
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      # tag กับ version ใน pyproject ต้องตรงกัน ไม่งั้นจะได้ release ที่ชื่อไม่ตรงกับของข้างใน
+      # และไม่มีทางแก้ย้อนหลังเพราะ PyPI ไม่ให้อัปโหลดทับ
+      - name: Tag must match the packaged version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          packaged=$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)
+          echo "tag=$tag packaged=$packaged"
+          test "$tag" = "$packaged"
+
+      - run: uv build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  testpypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  smoke:
+    needs: testpypi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ติดตั้งจาก TestPyPI จริงแล้วรันของจริง — `uv build` สำเร็จไม่ได้แปลว่า wheel
+      # ที่ได้ import ได้ dependency ครบ หรือ packages ถูกใส่มาจริง
+      - name: Install from TestPyPI and use it
+        run: |
+          for _ in $(seq 1 10); do
+            pip install --index-url https://test.pypi.org/simple/ \
+              --extra-index-url https://pypi.org/simple \
+              "agentguard==${GITHUB_REF_NAME#v}" && break
+            echo "ยังไม่ขึ้น index รอ 15 วิ"; sleep 15
+          done
+          python -c "
+          import agentguard
+          from agentguard import Guard, ToolPolicy, RiskClass, Max
+          from agentguard.adapters import wrap_dispatcher
+          guard = Guard(policies=[ToolPolicy('t', risk=RiskClass.WRITE, require=[Max('n', 1)])])
+          with guard.session() as s:
+              assert s.check('t', {'n': 99}).action.value == 'block'
+          print('smoke ok', agentguard.__version__)
+          "
+
+  pypi:
+    needs: smoke
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

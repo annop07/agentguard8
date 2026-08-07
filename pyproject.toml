@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentguard"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Deterministic policy enforcement for AI agent tool calls."
 readme = "README.md"
 license = { file = "LICENSE" }

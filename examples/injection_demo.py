@@ -86,8 +86,10 @@ def run_agent(email: str, guard_session: Session | None) -> None:
 
         print(f"  {decision}")
         if not decision.allowed:
-            print(f"      ↳ tool ได้รับ: {decision.as_tool_error()['code']} "
-                  f"(retryable={decision.as_tool_error()['retryable']})")
+            print(
+                f"      ↳ tool ได้รับ: {decision.as_tool_error()['code']} "
+                f"(retryable={decision.as_tool_error()['retryable']})"
+            )
 
 
 def _fmt(args: dict) -> str:
