@@ -9,8 +9,12 @@
 > Deterministic policy enforcement for AI agent tool calls.
 
 ```bash
-pip install taintguard
+pip install taintguard      # ต้อง Python 3.10 ขึ้นไป
 ```
+
+> macOS มาพร้อม Python **3.9** ซึ่งเก่าเกินไป ถ้า `pip` ตอบว่า *"Ignored the following
+> versions that require a different python version"* แปลว่ากำลังใช้ตัวนั้นอยู่ — สร้าง venv
+> ด้วยเวอร์ชันที่ใหม่กว่า เช่น `uv venv --python 3.12` หรือ `python3.12 -m venv .venv`
 
 AI agent ที่เรียก tool ได้เอง มีช่องโหว่ที่โค้ดปกติไม่มี — **ข้อมูลที่ agent อ่าน
 กลายเป็นคำสั่งที่ agent ทำตามได้** attacker ไม่ต้องเข้าถึงระบบ แค่ฝากข้อความไว้ในอีเมล
